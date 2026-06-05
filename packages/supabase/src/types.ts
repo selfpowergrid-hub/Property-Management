@@ -49,6 +49,15 @@ type InquiryRow = {
   created_at: string;
 };
 
+type PushTokenRow = {
+  id: string;
+  org_id: string;
+  user_id: string;
+  token: string;
+  platform: string | null;
+  created_at: string;
+};
+
 type DocumentRow = {
   id: string;
   org_id: string;
@@ -239,6 +248,11 @@ export interface Database {
         InquiryRow,
         "id" | "created_at" | "unit_id" | "preferred_move_in" | "message",
         [FK<"org_id", "organisations">, FK<"unit_id", "units">]
+      >;
+      push_tokens: Table<
+        PushTokenRow,
+        "id" | "created_at" | "platform",
+        [FK<"org_id", "organisations">, FK<"user_id", "users">]
       >;
       users: Table<
         UserRow,

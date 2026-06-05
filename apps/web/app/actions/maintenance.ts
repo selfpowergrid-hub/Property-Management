@@ -12,7 +12,9 @@ import {
 import { requireFeature, requireTenant, getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sendSms } from "@/lib/sms";
+import { sendPush } from "@/lib/push";
 import { smsTemplates } from "@/lib/sms-templates";
+import { enumLabel } from "@nyumba360/shared";
 import type { MutationState } from "@/app/actions/properties";
 
 const ok: MutationState = { ok: true };
@@ -35,10 +37,12 @@ async function notifyManagers(supabase: Supa, orgId: string, unitNumber: string,
 async function notifyTenant(supabase: Supa, orgId: string, requestId: string, status: string) {
   const { data: req } = await supabase
     .from("maintenance_requests")
-    .select("category, tenants(phone, full_name)")
+    .select("category, tenants(phone, full_name, user_id)")
     .eq("id", requestId)
     .maybeSingle();
-  const tenant = req?.tenants as { phone?: string | null; full_name?: string | null } | undefined;
+  const tenant = req?.tenants as
+    | { phone?: string | null; full_name?: string | null; user_id?: string | null }
+    | undefined;
   if (tenant?.phone) {
     await sendSms(supabase, {
       orgId,
@@ -46,6 +50,12 @@ async function notifyTenant(supabase: Supa, orgId: string, requestId: string, st
       message: smsTemplates.maintenanceStatusUpdated(tenant.full_name ?? "tenant", req?.category ?? "request", status),
     });
   }
+  await sendPush(
+    tenant?.user_id,
+    "Maintenance update",
+    `Your ${req?.category ?? "request"} is now ${enumLabel(status)}.`,
+    { type: "maintenance", requestId },
+  );
 }
 
 // ── Tenant submits from the portal (MNT-01) ─────────────────────────────────

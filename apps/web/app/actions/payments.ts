@@ -5,7 +5,9 @@ import { paymentSchema } from "@nyumba360/shared";
 import { requireFeature } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sendSms } from "@/lib/sms";
+import { sendPush } from "@/lib/push";
 import { smsTemplates } from "@/lib/sms-templates";
+import { formatKES } from "@nyumba360/shared";
 import type { MutationState } from "@/app/actions/properties";
 
 const ok: MutationState = { ok: true };
@@ -52,14 +54,16 @@ export async function recordPaymentAction(_prev: MutationState, formData: FormDa
   // receipt number and updated invoice balances, so read them back.
   const [{ data: receipt }, { data: lease }] = await Promise.all([
     supabase.from("payments").select("receipt_number").eq("id", payment.id).maybeSingle(),
-    supabase.from("leases").select("tenants(phone, full_name)").eq("id", parsed.data.leaseId).maybeSingle(),
+    supabase.from("leases").select("tenants(phone, full_name, user_id)").eq("id", parsed.data.leaseId).maybeSingle(),
   ]);
   const { data: invoices } = await supabase
     .from("invoices")
     .select("amount, amount_paid")
     .eq("lease_id", parsed.data.leaseId);
   const balance = invoices?.reduce((s, i) => s + (Number(i.amount) - Number(i.amount_paid)), 0) ?? 0;
-  const tenant = lease?.tenants as { phone?: string | null; full_name?: string | null } | undefined;
+  const tenant = lease?.tenants as
+    | { phone?: string | null; full_name?: string | null; user_id?: string | null }
+    | undefined;
 
   if (tenant?.phone) {
     await sendSms(supabase, {
@@ -73,6 +77,12 @@ export async function recordPaymentAction(_prev: MutationState, formData: FormDa
       ),
     });
   }
+  await sendPush(
+    tenant?.user_id,
+    "Payment received",
+    `We received ${formatKES(parsed.data.amount)}. Balance: ${formatKES(balance)}.`,
+    { type: "payment" },
+  );
 
   revalidatePath("/payments");
   revalidatePath("/dashboard");

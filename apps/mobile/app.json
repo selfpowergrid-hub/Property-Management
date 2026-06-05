@@ -21,9 +21,19 @@
         "backgroundColor": "#147a55"
       }
     },
+    "plugins": [
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Nyumba360 needs access to your photos to attach to maintenance requests.",
+          "cameraPermission": "Nyumba360 needs camera access to photograph maintenance issues."
+        }
+      ]
+    ],
     "extra": {
-      "supabaseUrl": "http://127.0.0.1:54321",
-      "supabaseAnonKey": ""
+      "supabaseUrl": "https://bjnryjmgqkzbmhmmkyjf.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbnJ5am1ncWt6Ym1obW1reWpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2Mzg2NjcsImV4cCI6MjA5NjIxNDY2N30.L2q2PhEw-I1d2v1Q1WyChjZwFZIVcUy1eBVGdiMO-Pk"
     }
   }
 }
