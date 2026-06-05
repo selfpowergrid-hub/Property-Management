@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Expo
+.expo/
+.expo-shared/
+*.orig.*
+web-build/
+
+# Environment
+.env
+.env.local
+.env*.local
+!.env.example
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

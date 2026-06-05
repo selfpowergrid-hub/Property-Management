@@ -1,0 +1,43 @@
+# Nyumba360 — local Supabase config. `project_id` is the local stack name.
+project_id = "nyumba360"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+# Buckets for lease docs, receipts, maintenance photos, expense receipts (PROP-05, MNT-01, EXP-01).
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000"]
+jwt_expiry = 86400  # 24h per NFR §10 (Security)
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false  # local dev; production should enable
+
+# Custom Access Token Hook — injects org_id + role into the JWT (PRD §9.2 multi-tenancy).
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/auth/custom_access_token_hook"

@@ -1,0 +1,32 @@
+{
+  "name": "nyumba360",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nyumba360 — Multi-tenant Property & Rent Management SaaS",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:stop": "supabase stop"
+  },
+  "devDependencies": {
+    "pg": "^8.21.0",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "18.2.79",
+      "@types/react-dom": "18.2.25",
+      "@supabase/supabase-js": "2.47.10"
+    }
+  }
+}

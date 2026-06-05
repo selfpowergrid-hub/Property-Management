@@ -1,0 +1,12 @@
+{
+  "extends": "@nyumba360/tsconfig/react-library.json",
+  "compilerOptions": {
+    "jsx": "react-native",
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "Bundler",
+    "types": ["react", "react-native"]
+  },
+  "include": ["*.ts", "*.tsx", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}

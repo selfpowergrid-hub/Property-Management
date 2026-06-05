@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Nyumba360",
+    "slug": "nyumba360",
+    "scheme": "nyumba360",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#147a55"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.totalman.nyumba360"
+    },
+    "android": {
+      "package": "com.totalman.nyumba360",
+      "adaptiveIcon": {
+        "backgroundColor": "#147a55"
+      }
+    },
+    "extra": {
+      "supabaseUrl": "http://127.0.0.1:54321",
+      "supabaseAnonKey": ""
+    }
+  }
+}
