@@ -26,6 +26,13 @@ web-build/
 supabase/.branches/
 supabase/.temp/
 
+# Playwright (E2E) artifacts
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+playwright/.cache/
+
 # Logs
 *.log
 npm-debug.log*

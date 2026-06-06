@@ -1,14 +1,21 @@
 # Nyumba360
 
 Multi-tenant **property & rent management SaaS** for the Kenyan market.
-This repository contains the **Phase 1 foundation** (PRD §12, Weeks 1–3): the
-monorepo, the full Supabase data model with per-organisation Row-Level Security,
-authentication with role claims and an invite flow, a role-aware Next.js app
-shell for all five roles, and an Expo mobile skeleton.
 
-> Modules built in later phases: rent collection & receipting, maintenance,
-> vacancies, expenses, reports, Africa's Talking SMS, the full mobile app, and
-> PDF generation. See `Nyumba360_PRD_v1.0.md`.
+Phases 1–4 are built (PRD §12): the monorepo and Supabase data model with
+per-organisation Row-Level Security; auth with role claims and an invite flow; a
+role-aware Next.js app for all five roles; property/unit, tenant/lease, invoicing
+and receipting (PDF), maintenance, vacancies and expenses; reports (PDF + CSV);
+Africa's Talking SMS; the tenant web portal; and a React Native (Expo) tenant app
+with push notifications.
+
+**Phase 5 (QA & Launch)** adds the E2E test harness, CI, production deployment
+configuration (Vercel + EAS), admin seeding, and the launch/onboarding docs:
+
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — production launch runbook
+- [docs/ONBOARDING.md](docs/ONBOARDING.md) — landlord & staff onboarding guide
+
+See `Nyumba360_PRD_v1.0.md` for the full product spec.
 
 ## Stack
 
@@ -101,6 +108,11 @@ pnpm typecheck     # tsc across all packages/apps
 pnpm lint          # eslint / next lint
 pnpm build         # turbo build
 pnpm db:reset      # reset local DB + reseed
+pnpm seed:admin    # provision a production org + landlord (see docs/DEPLOYMENT.md §5)
+
+# E2E (Playwright) — public smoke tests run without a DB; authenticated flows
+# run when Supabase is reachable, otherwise skip. See apps/web/e2e.
+pnpm --filter @nyumba360/web test:e2e
 ```
 
 ## Verifying RLS isolation
