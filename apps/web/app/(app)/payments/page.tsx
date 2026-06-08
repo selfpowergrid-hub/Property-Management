@@ -1,36 +1,50 @@
 import Link from "next/link";
-import { PAYMENT_METHODS, enumLabel, formatKES, formatDate } from "@nyumba360/shared";
+import { enumLabel, formatKES, formatDate } from "@nyumba360/shared";
 import { requireFeature } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { recordPaymentAction } from "@/app/actions/payments";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FormDialog, Field } from "@/components/form-dialog";
+import { FormDialog } from "@/components/form-dialog";
 import { EmptyState } from "@/components/empty-state";
+import { RecordPaymentFields, type LeaseOption } from "./record-payment-fields";
 
 export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
-  await requireFeature("payments.record");
+  const me = await requireFeature("payments.record");
   const supabase = await createClient();
 
-  const [{ data: leases }, { data: payments }] = await Promise.all([
+  const [{ data: leases }, { data: payments }, { data: org }] = await Promise.all([
     supabase
       .from("leases")
-      .select("id, rent_amount, tenants(full_name), units(unit_number)")
+      .select("id, rent_amount, tenants(full_name), units(unit_number), invoices(amount, amount_paid)")
       .eq("status", "active"),
     supabase
       .from("payments")
-      .select("id, amount, payment_date, method, receipt_number, leases(tenants(full_name), units(unit_number))")
+      .select(
+        "id, amount, payment_date, method, receipt_number, is_late, leases(tenants(full_name), units(unit_number))",
+      )
       .order("payment_date", { ascending: false })
       .limit(100),
+    supabase.from("organisations").select("mpesa_paybill_number").eq("id", me.orgId!).maybeSingle(),
   ]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  // Outstanding balance per active lease (sum of unpaid invoice remainders).
+  const leaseOptions: LeaseOption[] = (leases ?? []).map((l) => {
+    const invoices = (l.invoices as { amount: number; amount_paid: number }[] | null) ?? [];
+    const balance = invoices.reduce((s, i) => s + (Number(i.amount) - Number(i.amount_paid)), 0);
+    return {
+      id: l.id,
+      tenantName: (l.tenants as { full_name?: string } | null)?.full_name ?? "—",
+      unitNumber: (l.units as { unit_number?: string } | null)?.unit_number ?? "—",
+      rent: Number(l.rent_amount),
+      balance,
+    };
+  });
 
   const recordDialog = (
     <FormDialog
@@ -40,48 +54,7 @@ export default async function PaymentsPage() {
       action={recordPaymentAction}
       submitLabel="Record payment"
     >
-      <Field label="Lease" htmlFor="leaseId">
-        <Select id="leaseId" name="leaseId" required defaultValue="">
-          <option value="" disabled>
-            Select an active lease
-          </option>
-          {(leases ?? []).map((l) => {
-            const tenant = l.tenants as { full_name?: string } | null;
-            const unit = l.units as { unit_number?: string } | null;
-            return (
-              <option key={l.id} value={l.id}>
-                {tenant?.full_name ?? "—"} · Unit {unit?.unit_number ?? "—"} ({formatKES(l.rent_amount)})
-              </option>
-            );
-          })}
-        </Select>
-      </Field>
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Amount (KES)" htmlFor="amount">
-          <Input id="amount" name="amount" type="number" min="1" step="0.01" required />
-        </Field>
-        <Field label="Date" htmlFor="paymentDate">
-          <Input id="paymentDate" name="paymentDate" type="date" defaultValue={today} required />
-        </Field>
-        <Field label="Method" htmlFor="method">
-          <Select id="method" name="method" defaultValue="mpesa_paybill">
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m} value={m}>
-                {enumLabel(m)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Payer name" htmlFor="payerName">
-          <Input id="payerName" name="payerName" />
-        </Field>
-        <Field label="M-Pesa code" htmlFor="mpesaCode" hint="Required for M-Pesa Paybill">
-          <Input id="mpesaCode" name="mpesaCode" placeholder="e.g. SLJ7XK21AB" />
-        </Field>
-        <Field label="Bank reference" htmlFor="bankRef" hint="Required for bank transfer">
-          <Input id="bankRef" name="bankRef" />
-        </Field>
-      </div>
+      <RecordPaymentFields leases={leaseOptions} paybillNumber={org?.mpesa_paybill_number ?? null} />
     </FormDialog>
   );
 
@@ -117,7 +90,12 @@ export default async function PaymentsPage() {
                       <TableCell>{formatDate(p.payment_date)}</TableCell>
                       <TableCell className="font-medium">{lease?.tenants?.full_name ?? "—"}</TableCell>
                       <TableCell>{lease?.units?.unit_number ?? "—"}</TableCell>
-                      <TableCell>{formatKES(p.amount)}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-2">
+                          {formatKES(p.amount)}
+                          {p.is_late ? <Badge variant="destructive">Late</Badge> : null}
+                        </span>
+                      </TableCell>
                       <TableCell>{enumLabel(p.method)}</TableCell>
                       <TableCell>
                         <Link href={`/payments/${p.id}/receipt`} className="text-primary hover:underline">

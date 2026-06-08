@@ -25,6 +25,7 @@ const STAFF_NAV: NavItem[] = [
   { label: "Expenses", href: "/expenses", icon: "Wallet", feature: "expenses.record" },
   { label: "Reports", href: "/reports", icon: "BarChart3", feature: "reports.view" },
   { label: "Users", href: "/users", icon: "ShieldCheck", feature: "users.manage" },
+  { label: "Settings", href: "/settings", icon: "Settings", feature: "org.manage" },
 ];
 
 const TENANT_NAV: NavItem[] = [

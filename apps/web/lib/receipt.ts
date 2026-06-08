@@ -12,6 +12,8 @@ export interface ReceiptData {
   unitNumber: string;
   propertyName: string;
   balanceAfter: number;
+  isLate: boolean;
+  paybillNumber: string | null;
 }
 
 /**
@@ -26,7 +28,7 @@ export async function getReceiptData(
   const { data: payment } = await supabase
     .from("payments")
     .select(
-      "amount, payment_date, method, mpesa_code, bank_ref, payer_name, receipt_number, org_id, lease_id, leases(tenant_id, tenants(full_name), units(unit_number, properties(name)))",
+      "amount, payment_date, method, mpesa_code, bank_ref, payer_name, receipt_number, is_late, org_id, lease_id, leases(tenant_id, tenants(full_name), units(unit_number, properties(name)))",
     )
     .eq("id", paymentId)
     .maybeSingle();
@@ -37,7 +39,11 @@ export async function getReceiptData(
     | null;
 
   const [{ data: org }, { data: invoices }] = await Promise.all([
-    supabase.from("organisations").select("name").eq("id", payment.org_id).maybeSingle(),
+    supabase
+      .from("organisations")
+      .select("name, mpesa_paybill_number")
+      .eq("id", payment.org_id)
+      .maybeSingle(),
     payment.lease_id
       ? supabase.from("invoices").select("amount, amount_paid").eq("lease_id", payment.lease_id)
       : Promise.resolve({ data: [] as { amount: number; amount_paid: number }[] }),
@@ -58,5 +64,7 @@ export async function getReceiptData(
     unitNumber: lease?.units?.unit_number ?? "—",
     propertyName: lease?.units?.properties?.name ?? "—",
     balanceAfter,
+    isLate: Boolean(payment.is_late),
+    paybillNumber: org?.mpesa_paybill_number ?? null,
   };
 }

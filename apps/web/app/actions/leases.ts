@@ -60,10 +60,80 @@ async function provisionTenantLogin(
 const ok: MutationState = { ok: true };
 const fail = (error: string): MutationState => ({ error });
 
+export interface LeaseTerms {
+  unitId: string;
+  tenantId: string;
+  startDate: string;
+  endDate?: string | null;
+  rentAmount: number;
+  deposit: number;
+  paymentDueDay: number;
+}
+
 /**
- * Create + activate a lease (TEN-02): links a tenant to a unit, flips the unit
- * to `occupied`, and generates the first rent invoice (TEN-03) via the DB
- * function. Monthly invoices thereafter come from pg_cron.
+ * Create + activate a single lease (TEN-02): verifies the unit is vacant in the
+ * org, links the tenant, flips the unit to `occupied`, generates the first rent
+ * invoice (TEN-03), provisions the tenant login (AUTH-05), and sends the
+ * invoice SMS. Shared by createLeaseAction and the create-tenant-with-
+ * allocations flow so the activation logic lives in one place.
+ */
+export async function activateLease(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  terms: LeaseTerms,
+): Promise<{ error?: string }> {
+  // Guard double-allocation / cross-org: the unit must be vacant and ours.
+  const { data: unit } = await supabase
+    .from("units")
+    .select("id, status, org_id")
+    .eq("id", terms.unitId)
+    .maybeSingle();
+  if (!unit || unit.org_id !== orgId) return { error: "Unit not found" };
+  if (unit.status !== "vacant") return { error: "Unit is no longer vacant" };
+
+  const { data: lease, error } = await supabase
+    .from("leases")
+    .insert({
+      org_id: orgId,
+      unit_id: terms.unitId,
+      tenant_id: terms.tenantId,
+      start_date: terms.startDate,
+      end_date: terms.endDate || null,
+      rent_amount: terms.rentAmount,
+      deposit: terms.deposit,
+      payment_due_day: terms.paymentDueDay,
+      status: "active",
+    })
+    .select("id")
+    .single();
+  if (error || !lease) return { error: error?.message ?? "Could not create lease" };
+
+  await supabase.from("units").update({ status: "occupied" }).eq("id", terms.unitId);
+  await supabase.rpc("generate_first_invoice", { p_lease: lease.id });
+
+  // AUTH-05: provision the tenant login + SMS credentials (no-op if linked).
+  await provisionTenantLogin(supabase, orgId, terms.tenantId);
+
+  // Invoice-generated SMS (first invoice; monthly notices are deferred).
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("full_name, phone")
+    .eq("id", terms.tenantId)
+    .maybeSingle();
+  if (tenant?.phone) {
+    const period = new Date(terms.startDate);
+    const due = new Date(period.getFullYear(), period.getMonth(), terms.paymentDueDay);
+    await sendSms(supabase, {
+      orgId,
+      phone: tenant.phone,
+      message: smsTemplates.invoiceGenerated(tenant.full_name, terms.rentAmount, formatDate(due)),
+    });
+  }
+  return {};
+}
+
+/**
+ * Create + activate a lease from the tenant detail page form (TEN-02).
  */
 export async function createLeaseAction(_prev: MutationState, formData: FormData): Promise<MutationState> {
   const me = await requireFeature("tenants.manage");
@@ -80,44 +150,16 @@ export async function createLeaseAction(_prev: MutationState, formData: FormData
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input");
 
   const supabase = await createClient();
-  const { data: lease, error } = await supabase
-    .from("leases")
-    .insert({
-      org_id: me.orgId!,
-      unit_id: parsed.data.unitId,
-      tenant_id: parsed.data.tenantId,
-      start_date: parsed.data.startDate,
-      end_date: parsed.data.endDate || null,
-      rent_amount: parsed.data.rentAmount,
-      deposit: parsed.data.deposit,
-      payment_due_day: parsed.data.paymentDueDay,
-      status: "active",
-    })
-    .select("id")
-    .single();
-  if (error || !lease) return fail(error?.message ?? "Could not create lease");
-
-  await supabase.from("units").update({ status: "occupied" }).eq("id", parsed.data.unitId);
-  await supabase.rpc("generate_first_invoice", { p_lease: lease.id });
-
-  // AUTH-05: provision the tenant login + SMS credentials.
-  await provisionTenantLogin(supabase, me.orgId!, parsed.data.tenantId);
-
-  // Invoice-generated SMS (first invoice; monthly notices are deferred).
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("full_name, phone")
-    .eq("id", parsed.data.tenantId)
-    .maybeSingle();
-  if (tenant?.phone) {
-    const period = new Date(parsed.data.startDate);
-    const due = new Date(period.getFullYear(), period.getMonth(), parsed.data.paymentDueDay);
-    await sendSms(supabase, {
-      orgId: me.orgId!,
-      phone: tenant.phone,
-      message: smsTemplates.invoiceGenerated(tenant.full_name, parsed.data.rentAmount, formatDate(due)),
-    });
-  }
+  const { error } = await activateLease(supabase, me.orgId!, {
+    unitId: parsed.data.unitId,
+    tenantId: parsed.data.tenantId,
+    startDate: parsed.data.startDate,
+    endDate: parsed.data.endDate || null,
+    rentAmount: parsed.data.rentAmount,
+    deposit: parsed.data.deposit,
+    paymentDueDay: parsed.data.paymentDueDay,
+  });
+  if (error) return fail(error);
 
   revalidatePath(`/tenants/${parsed.data.tenantId}`);
   revalidatePath("/properties");

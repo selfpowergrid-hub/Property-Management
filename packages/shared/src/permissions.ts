@@ -17,6 +17,7 @@ export const FEATURES = [
   "expenses.record", // Record expenses
   "reports.view", // View reports
   "users.manage", // Manage users & roles
+  "org.manage", // Manage organisation settings (billing, grace period)
   "data.export", // Export data (CSV/PDF)
 ] as const;
 
@@ -39,6 +40,7 @@ export const PERMISSION_MATRIX: Matrix = {
   "expenses.record": ["landlord", "manager", "accountant"],
   "reports.view": ["landlord", "manager", "accountant"],
   "users.manage": ["landlord"],
+  "org.manage": ["landlord"],
   "data.export": ["landlord", "manager", "accountant"],
 };
 

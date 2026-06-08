@@ -15,6 +15,7 @@ const styles = StyleSheet.create({
   amountBox: { marginTop: 20, padding: 16, backgroundColor: "#f0f7f3", borderRadius: 6 },
   amountLabel: { fontSize: 10, color: "#5b6b64" },
   amount: { fontSize: 22, fontWeight: "bold", color: "#147a55", marginTop: 4 },
+  lateNote: { fontSize: 9, color: "#b4541a", marginTop: 6 },
   footer: { marginTop: 36, fontSize: 9, color: "#8a9690", textAlign: "center" },
 });
 
@@ -51,6 +52,14 @@ function Receipt({ data }: { data: ReceiptData }) {
           <Text style={styles.label}>Method</Text>
           <Text style={styles.value}>{enumLabel(data.method)}</Text>
         </View>
+        {data.paybillNumber ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Paybill · Account ref</Text>
+            <Text style={styles.value}>
+              {data.paybillNumber} · {data.unitNumber}
+            </Text>
+          </View>
+        ) : null}
         {data.reference ? (
           <View style={styles.row}>
             <Text style={styles.label}>Reference</Text>
@@ -67,6 +76,7 @@ function Receipt({ data }: { data: ReceiptData }) {
         <View style={styles.amountBox}>
           <Text style={styles.amountLabel}>Amount received</Text>
           <Text style={styles.amount}>{formatKES(data.amount)}</Text>
+          {data.isLate ? <Text style={styles.lateNote}>Received after the due date (late payment)</Text> : null}
         </View>
 
         <View style={[styles.row, { marginTop: 16 }]}>

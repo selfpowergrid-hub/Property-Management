@@ -48,6 +48,19 @@ export const inviteUserSchema = z.object({
 });
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 
+// Organisation billing settings (PAY-02 Paybill, PAY-06 grace period).
+export const orgBillingSchema = z.object({
+  // Kenyan Paybill/Till numbers are 5–7 digits; optional until configured.
+  mpesaPaybillNumber: z
+    .string()
+    .trim()
+    .regex(/^\d{5,7}$/u, "Paybill number should be 5–7 digits")
+    .optional()
+    .or(z.literal("")),
+  graceDays: z.coerce.number().int().min(0, "Cannot be negative").max(31, "At most 31 days"),
+});
+export type OrgBillingInput = z.infer<typeof orgBillingSchema>;
+
 // ── Property & unit ─────────────────────────────────────────────────────────
 export const propertySchema = z.object({
   name: z.string().trim().min(2, "Property name is required"),
@@ -69,14 +82,71 @@ export const unitSchema = z.object({
 export type UnitInput = z.infer<typeof unitSchema>;
 
 // ── Tenant & lease ──────────────────────────────────────────────────────────
+export const ID_DOCUMENT_TYPES = ["national_id", "passport", "alien_id", "military_id"] as const;
+export const GENDERS = ["male", "female", "other", "undisclosed"] as const;
+export const MARITAL_STATUSES = ["single", "married", "divorced", "widowed"] as const;
+
+const optionalText = z.string().trim().optional().or(z.literal(""));
+// KRA PIN: a letter, 9 digits, a trailing letter (e.g. A012345678Z). Optional.
+const kraPin = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z]\d{9}[A-Za-z]$/u, "Enter a valid KRA PIN (e.g. A012345678Z)")
+  .optional()
+  .or(z.literal(""));
+
 export const tenantSchema = z.object({
+  // Identity
   fullName: z.string().trim().min(2, "Tenant name is required"),
+  idType: z.enum(ID_DOCUMENT_TYPES).optional().or(z.literal("")),
+  nationalId: optionalText,
+  dateOfBirth: z.string().date().optional().or(z.literal("")),
+  gender: z.enum(GENDERS).optional().or(z.literal("")),
+  nationality: optionalText,
+  maritalStatus: z.enum(MARITAL_STATUSES).optional().or(z.literal("")),
+  kraPin,
+  // Contact & address
   phone: phoneKE,
+  alternatePhone: phoneKE.optional().or(z.literal("")),
   email: z.string().trim().email().optional().or(z.literal("")),
-  nationalId: z.string().trim().optional(),
-  emergencyContact: z.string().trim().optional(),
+  postalAddress: optionalText,
+  physicalAddress: optionalText,
+  // Employment
+  occupation: optionalText,
+  employer: optionalText,
+  // Next of kin / emergency
+  emergencyContact: optionalText,
+  nextOfKinName: optionalText,
+  nextOfKinRelationship: optionalText,
+  nextOfKinPhone: phoneKE.optional().or(z.literal("")),
+  // Misc
+  notes: optionalText,
 });
 export type TenantInput = z.infer<typeof tenantSchema>;
+
+// One unit allocation = an active lease created alongside the tenant. Mirrors
+// leaseSchema's lease terms minus tenantId (the tenant is being created here).
+export const unitAllocationSchema = z
+  .object({
+    unitId: z.string().uuid(),
+    startDate: z.string().date(),
+    endDate: z.string().date().optional().or(z.literal("")),
+    rentAmount: kesAmount,
+    deposit: kesAmount.default(0),
+    paymentDueDay: z.coerce.number().int().min(1).max(28),
+  })
+  .refine((v) => !v.endDate || v.endDate >= v.startDate, {
+    message: "End date must be after the start date",
+    path: ["endDate"],
+  });
+export type UnitAllocationInput = z.infer<typeof unitAllocationSchema>;
+
+// Create a tenant plus zero or more unit allocations in one submission.
+export const createTenantWithAllocationsSchema = z.object({
+  tenant: tenantSchema,
+  allocations: z.array(unitAllocationSchema).default([]),
+});
+export type CreateTenantWithAllocationsInput = z.infer<typeof createTenantWithAllocationsSchema>;
 
 export const leaseSchema = z
   .object({

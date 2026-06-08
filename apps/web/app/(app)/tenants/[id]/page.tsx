@@ -22,7 +22,9 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, full_name, phone, email, national_id, emergency_contact")
+    .select(
+      "id, full_name, phone, email, national_id, emergency_contact, id_type, date_of_birth, gender, nationality, marital_status, kra_pin, occupation, employer, alternate_phone, postal_address, physical_address, next_of_kin_name, next_of_kin_relationship, next_of_kin_phone, notes",
+    )
     .eq("id", params.id)
     .maybeSingle();
   if (!tenant) notFound();
@@ -52,7 +54,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
 
   const outstanding =
     invoices?.reduce((s, i) => s + (Number(i.amount) - Number(i.amount_paid)), 0) ?? 0;
-  const activeLease = leases?.find((l) => l.status === "active");
+  const hasVacantUnits = (vacantUnits?.length ?? 0) > 0;
 
   const createLeaseDialog = (
     <FormDialog
@@ -105,7 +107,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
       <PageHeader
         title={tenant.full_name}
         description={`${tenant.phone ?? "—"}${tenant.email ? ` · ${tenant.email}` : ""}`}
-        action={!activeLease ? createLeaseDialog : undefined}
+        action={hasVacantUnits ? createLeaseDialog : undefined}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -117,17 +119,57 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">National ID</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">ID document</CardTitle>
           </CardHeader>
-          <CardContent className="text-lg">{tenant.national_id ?? "—"}</CardContent>
+          <CardContent className="text-lg">
+            {tenant.id_type ? `${enumLabel(tenant.id_type)} · ` : ""}
+            {tenant.national_id ?? "—"}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Emergency contact</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">KRA PIN</CardTitle>
           </CardHeader>
-          <CardContent className="text-lg">{tenant.emergency_contact ?? "—"}</CardContent>
+          <CardContent className="text-lg">{tenant.kra_pin ?? "—"}</CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["Date of birth", tenant.date_of_birth ? formatDate(tenant.date_of_birth) : null],
+              ["Gender", tenant.gender ? enumLabel(tenant.gender) : null],
+              ["Nationality", tenant.nationality],
+              ["Marital status", tenant.marital_status ? enumLabel(tenant.marital_status) : null],
+              ["Occupation", tenant.occupation],
+              ["Employer", tenant.employer],
+              ["Alternate phone", tenant.alternate_phone],
+              ["Email", tenant.email],
+              ["Postal address", tenant.postal_address],
+              ["Physical address", tenant.physical_address],
+              ["Next of kin", tenant.next_of_kin_name],
+              ["Kin relationship", tenant.next_of_kin_relationship],
+              ["Kin phone", tenant.next_of_kin_phone],
+              ["Emergency contact", tenant.emergency_contact],
+            ].map(([label, value]) => (
+              <div key={label as string}>
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+                <dd className="text-sm">{value ? value : "—"}</dd>
+              </div>
+            ))}
+          </dl>
+          {tenant.notes ? (
+            <div className="mt-4 border-t pt-4">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Notes</dt>
+              <dd className="text-sm whitespace-pre-wrap">{tenant.notes}</dd>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       {/* Leases */}
       <Card className="mt-6">

@@ -34,6 +34,7 @@ type OrganisationRow = Timestamps & {
   subscription_status: SubscriptionStatus;
   county: string | null;
   grace_days: number;
+  mpesa_paybill_number: string | null;
 };
 
 export type DocumentOwnerType = "property" | "unit" | "lease" | "maintenance";
@@ -109,6 +110,8 @@ type UnitRow = Timestamps & {
   listing_description: string | null;
 };
 
+export type IdDocumentType = "national_id" | "passport" | "alien_id" | "military_id";
+
 type TenantRow = Timestamps & {
   id: string;
   org_id: string;
@@ -118,6 +121,21 @@ type TenantRow = Timestamps & {
   email: string | null;
   national_id: string | null;
   emergency_contact: string | null;
+  id_type: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  nationality: string | null;
+  marital_status: string | null;
+  kra_pin: string | null;
+  occupation: string | null;
+  employer: string | null;
+  alternate_phone: string | null;
+  postal_address: string | null;
+  physical_address: string | null;
+  next_of_kin_name: string | null;
+  next_of_kin_relationship: string | null;
+  next_of_kin_phone: string | null;
+  notes: string | null;
 };
 
 type LeaseRow = Timestamps & {
@@ -159,6 +177,7 @@ type PaymentRow = Timestamps & {
   payer_name: string | null;
   receipt_number: string | null;
   recorded_by: string | null;
+  is_late: boolean;
 };
 
 type MaintenanceRow = Timestamps & {
@@ -237,7 +256,7 @@ type Table<Row, Optional extends keyof Row, Rel extends readonly unknown[] = []>
 export interface Database {
   public: {
     Tables: {
-      organisations: Table<OrganisationRow, "id" | keyof Timestamps | "plan" | "subscription_status" | "county" | "grace_days">;
+      organisations: Table<OrganisationRow, "id" | keyof Timestamps | "plan" | "subscription_status" | "county" | "grace_days" | "mpesa_paybill_number">;
       documents: Table<
         DocumentRow,
         "id" | "created_at" | "content_type" | "uploaded_by",
@@ -271,7 +290,28 @@ export interface Database {
       >;
       tenants: Table<
         TenantRow,
-        "id" | keyof Timestamps | "user_id" | "phone" | "email" | "national_id" | "emergency_contact",
+        | "id"
+        | keyof Timestamps
+        | "user_id"
+        | "phone"
+        | "email"
+        | "national_id"
+        | "emergency_contact"
+        | "id_type"
+        | "date_of_birth"
+        | "gender"
+        | "nationality"
+        | "marital_status"
+        | "kra_pin"
+        | "occupation"
+        | "employer"
+        | "alternate_phone"
+        | "postal_address"
+        | "physical_address"
+        | "next_of_kin_name"
+        | "next_of_kin_relationship"
+        | "next_of_kin_phone"
+        | "notes",
         [FK<"org_id", "organisations">, FK<"user_id", "users">]
       >;
       leases: Table<
@@ -286,7 +326,7 @@ export interface Database {
       >;
       payments: Table<
         PaymentRow,
-        "id" | keyof Timestamps | "lease_id" | "invoice_id" | "payment_date" | "mpesa_code" | "bank_ref" | "payer_name" | "receipt_number" | "recorded_by",
+        "id" | keyof Timestamps | "lease_id" | "invoice_id" | "payment_date" | "mpesa_code" | "bank_ref" | "payer_name" | "receipt_number" | "recorded_by" | "is_late",
         [FK<"org_id", "organisations">, FK<"lease_id", "leases">, FK<"invoice_id", "invoices">]
       >;
       maintenance_requests: Table<

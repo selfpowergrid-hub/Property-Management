@@ -1,10 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createOrganisationSchema } from "@nyumba360/shared";
+import { revalidatePath } from "next/cache";
+import { createOrganisationSchema, orgBillingSchema } from "@nyumba360/shared";
+import { requireFeature } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ActionState } from "@/app/actions/auth";
+import type { MutationState } from "@/app/actions/properties";
 
 /**
  * Bootstrap a new landlord organisation (PRD §6.1). RLS forbids a user with no
@@ -55,4 +58,35 @@ export async function createOrganisationAction(
   // Force a fresh token so the new claims take effect immediately.
   await supabase.auth.refreshSession();
   redirect("/dashboard");
+}
+
+/**
+ * Update organisation billing settings (PAY-02 Paybill number, PAY-06 grace
+ * period). Landlord-only; RLS already restricts organisation updates to the
+ * landlord of the org, so the normal client is sufficient.
+ */
+export async function updateOrgBillingAction(
+  _prev: MutationState,
+  formData: FormData,
+): Promise<MutationState> {
+  const me = await requireFeature("org.manage");
+  const parsed = orgBillingSchema.safeParse({
+    mpesaPaybillNumber: formData.get("mpesaPaybillNumber") ?? "",
+    graceDays: formData.get("graceDays"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organisations")
+    .update({
+      mpesa_paybill_number: parsed.data.mpesaPaybillNumber || null,
+      grace_days: parsed.data.graceDays,
+    })
+    .eq("id", me.orgId!);
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/payments");
+  return { ok: true };
 }
