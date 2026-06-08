@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { UNIT_STATUSES, enumLabel, formatKES, type UnitStatus } from "@nyumba360/shared";
+import { PROPERTY_TYPES, UNIT_STATUSES, enumLabel, formatKES, type UnitStatus } from "@nyumba360/shared";
 import { requireFeature } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { createUnitAction, uploadDocumentAction } from "@/app/actions/properties";
+import { createUnitAction, updatePropertyAction, uploadDocumentAction } from "@/app/actions/properties";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,42 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
   );
 
   const units = property.units ?? [];
+  const heroUrl = docLinks.find((d) => d.bucket === "property-photos")?.url;
+
+  const editPropertyDialog = (
+    <FormDialog
+      trigger={
+        <Button variant="outline">Edit property</Button>
+      }
+      title="Edit property"
+      description="Update details or replace the photo (PROP-01/05)."
+      action={updatePropertyAction}
+      submitLabel="Save changes"
+    >
+      <input type="hidden" name="id" value={property.id} />
+      <Field label="Name" htmlFor="name">
+        <Input id="name" name="name" defaultValue={property.name} required />
+      </Field>
+      <Field label="Address" htmlFor="address">
+        <Input id="address" name="address" defaultValue={property.address ?? ""} />
+      </Field>
+      <Field label="County" htmlFor="county">
+        <Input id="county" name="county" defaultValue={property.county ?? ""} />
+      </Field>
+      <Field label="Type" htmlFor="type">
+        <Select id="type" name="type" defaultValue={property.type}>
+          {PROPERTY_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {enumLabel(t)}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Field label="Photo" htmlFor="photo" hint={heroUrl ? "Upload to replace the current photo" : "Optional"}>
+        <Input id="photo" name="photo" type="file" accept="image/*" />
+      </Field>
+    </FormDialog>
+  );
 
   const addUnitDialog = (
     <FormDialog
@@ -99,8 +135,20 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
       <PageHeader
         title={property.name}
         description={`${property.county ?? "—"} · ${enumLabel(property.type)}${property.address ? ` · ${property.address}` : ""}`}
-        action={addUnitDialog}
+        action={
+          <div className="flex gap-2">
+            {editPropertyDialog}
+            {addUnitDialog}
+          </div>
+        }
       />
+
+      {heroUrl ? (
+        <div className="mb-6 overflow-hidden rounded-lg border">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroUrl} alt={property.name} className="h-56 w-full object-cover" />
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>

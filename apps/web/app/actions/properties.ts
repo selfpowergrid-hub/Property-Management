@@ -19,6 +19,36 @@ export interface MutationState {
 const ok: MutationState = { ok: true };
 const fail = (error: string): MutationState => ({ error });
 
+/**
+ * Upload an optional property photo to the (private) property-photos bucket and
+ * record it in `documents` (PROP-05). Best-effort: a failed upload never blocks
+ * the property create/edit — the photo can be added later from the detail page.
+ */
+async function savePropertyPhoto(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  propertyId: string,
+  file: File | null,
+  userId: string,
+): Promise<void> {
+  if (!file || file.size === 0) return;
+  const path = `${orgId}/property/${propertyId}/${randomUUID()}-${file.name}`;
+  const { error: upErr } = await supabase.storage
+    .from("property-photos")
+    .upload(path, file, { contentType: file.type || undefined, upsert: false });
+  if (upErr) return;
+  await supabase.from("documents").insert({
+    org_id: orgId,
+    owner_type: "property",
+    owner_id: propertyId,
+    bucket: "property-photos",
+    path,
+    name: file.name,
+    content_type: file.type || null,
+    uploaded_by: userId,
+  });
+}
+
 // ── Properties (PROP-01) ────────────────────────────────────────────────────
 export async function createPropertyAction(_prev: MutationState, formData: FormData): Promise<MutationState> {
   const me = await requireFeature("properties.manage");
@@ -31,20 +61,26 @@ export async function createPropertyAction(_prev: MutationState, formData: FormD
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input");
 
   const supabase = await createClient();
-  const { error } = await supabase.from("properties").insert({
-    org_id: me.orgId!,
-    name: parsed.data.name,
-    address: parsed.data.address ?? null,
-    county: parsed.data.county ?? null,
-    type: parsed.data.type,
-  });
-  if (error) return fail(error.message);
+  const { data: property, error } = await supabase
+    .from("properties")
+    .insert({
+      org_id: me.orgId!,
+      name: parsed.data.name,
+      address: parsed.data.address ?? null,
+      county: parsed.data.county ?? null,
+      type: parsed.data.type,
+    })
+    .select("id")
+    .single();
+  if (error || !property) return fail(error?.message ?? "Could not create property");
+
+  await savePropertyPhoto(supabase, me.orgId!, property.id, formData.get("photo") as File | null, me.id);
   revalidatePath("/properties");
   return ok;
 }
 
 export async function updatePropertyAction(_prev: MutationState, formData: FormData): Promise<MutationState> {
-  await requireFeature("properties.manage");
+  const me = await requireFeature("properties.manage");
   const id = String(formData.get("id") ?? "");
   const parsed = propertySchema.safeParse({
     name: formData.get("name"),
@@ -65,6 +101,8 @@ export async function updatePropertyAction(_prev: MutationState, formData: FormD
     })
     .eq("id", id);
   if (error) return fail(error.message);
+
+  await savePropertyPhoto(supabase, me.orgId!, id, formData.get("photo") as File | null, me.id);
   revalidatePath("/properties");
   revalidatePath(`/properties/${id}`);
   return ok;

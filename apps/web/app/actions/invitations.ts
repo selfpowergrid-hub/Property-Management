@@ -45,6 +45,23 @@ export async function createInvitationAction(
   return { ok: true, link: `/accept-invite?token=${token}` };
 }
 
+/** Revoke a pending invitation (AUTH-04). Landlord-only; RLS scopes the update
+ *  to the caller's org. */
+export async function revokeInvitationAction(formData: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role !== "landlord") return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("user_invitations")
+    .update({ status: "revoked" })
+    .eq("id", id)
+    .eq("org_id", me.orgId!);
+  revalidatePath("/users");
+}
+
 /**
  * Accept an invitation: provisions the staff auth user bound to the inviting
  * org + role (service-role, since RLS can't permit cross-account provisioning),

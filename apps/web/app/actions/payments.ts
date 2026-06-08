@@ -26,9 +26,11 @@ export async function recordPaymentAction(_prev: MutationState, formData: FormDa
     amount: formData.get("amount"),
     paymentDate: formData.get("paymentDate"),
     method: formData.get("method"),
-    mpesaCode: formData.get("mpesaCode"),
-    bankRef: formData.get("bankRef"),
-    payerName: formData.get("payerName"),
+    // These inputs are only rendered for their method, so an absent field is
+    // null — coerce to "" so the optional string schema accepts it.
+    mpesaCode: formData.get("mpesaCode") ?? "",
+    bankRef: formData.get("bankRef") ?? "",
+    payerName: formData.get("payerName") ?? "",
   });
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input");
 

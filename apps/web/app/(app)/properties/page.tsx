@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Building, Building2, Store, type LucideIcon } from "lucide-react";
 import { PROPERTY_TYPES, enumLabel, formatKES } from "@nyumba360/shared";
 import { requireFeature } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -11,8 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { FormDialog, Field } from "@/components/form-dialog";
 import { EmptyState } from "@/components/empty-state";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+// Visual identity per property type: a gradient banner + a fitting building icon
+// so the cards read at a glance without needing uploaded photos.
+const TYPE_STYLE: Record<(typeof PROPERTY_TYPES)[number], { gradient: string; Icon: LucideIcon }> = {
+  residential: { gradient: "from-emerald-500 to-teal-600", Icon: Building2 },
+  commercial: { gradient: "from-amber-500 to-orange-600", Icon: Store },
+  mixed: { gradient: "from-violet-500 to-purple-600", Icon: Building },
+};
 
 export default async function PropertiesPage() {
   await requireFeature("properties.manage");
@@ -22,6 +32,30 @@ export default async function PropertiesPage() {
     .from("properties")
     .select("id, name, county, type, units(id, status, monthly_rent)")
     .order("created_at", { ascending: true });
+
+  // Latest photo per property (private bucket → sign a short-lived URL).
+  const propertyIds = (properties ?? []).map((p) => p.id);
+  const photoUrl = new Map<string, string>();
+  if (propertyIds.length) {
+    const { data: photos } = await supabase
+      .from("documents")
+      .select("owner_id, bucket, path, created_at")
+      .eq("owner_type", "property")
+      .eq("bucket", "property-photos")
+      .in("owner_id", propertyIds)
+      .order("created_at", { ascending: false });
+
+    const latest = new Map<string, { bucket: string; path: string }>();
+    for (const d of photos ?? []) {
+      if (!latest.has(d.owner_id)) latest.set(d.owner_id, { bucket: d.bucket, path: d.path });
+    }
+    await Promise.all(
+      [...latest].map(async ([pid, d]) => {
+        const { data } = await supabase.storage.from(d.bucket).createSignedUrl(d.path, 3600);
+        if (data?.signedUrl) photoUrl.set(pid, data.signedUrl);
+      }),
+    );
+  }
 
   const newPropertyDialog = (
     <FormDialog
@@ -49,6 +83,9 @@ export default async function PropertiesPage() {
           ))}
         </Select>
       </Field>
+      <Field label="Photo" htmlFor="photo" hint="Optional — shown on the property card">
+        <Input id="photo" name="photo" type="file" accept="image/*" />
+      </Field>
     </FormDialog>
   );
 
@@ -66,9 +103,32 @@ export default async function PropertiesPage() {
             const units = property.units ?? [];
             const occupied = units.filter((u) => u.status === "occupied").length;
             const rentRoll = units.reduce((s, u) => s + Number(u.monthly_rent), 0);
+            const style = TYPE_STYLE[property.type] ?? TYPE_STYLE.residential;
+            const occupancy = units.length ? Math.round((occupied / units.length) * 100) : null;
+            const photo = photoUrl.get(property.id);
             return (
               <Link key={property.id} href={`/properties/${property.id}`}>
-                <Card className="h-full transition-colors hover:border-primary/40">
+                <Card className="group h-full overflow-hidden transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+                  <div
+                    className={cn(
+                      "relative flex h-24 items-center justify-center bg-gradient-to-br",
+                      style.gradient,
+                    )}
+                  >
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photo}
+                        alt={property.name}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <style.Icon className="h-10 w-10 text-white/90 transition-transform group-hover:scale-110" />
+                    )}
+                    <span className="absolute right-3 top-3 rounded-full bg-black/40 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+                      {occupancy === null ? "No units" : `${occupancy}% occupied`}
+                    </span>
+                  </div>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <CardTitle>{property.name}</CardTitle>
