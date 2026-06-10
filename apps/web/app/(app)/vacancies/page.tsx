@@ -49,7 +49,7 @@ export default async function VacanciesPage() {
           ))}
         </Select>
       </Field>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Name" htmlFor="name">
           <Input id="name" name="name" required />
         </Field>

@@ -17,7 +17,7 @@ export default function SignUpPage() {
     <Card>
       <CardHeader>
         <CardTitle>Create your landlord account</CardTitle>
-        <CardDescription>Start managing your properties on Nyumba360.</CardDescription>
+        <CardDescription>Start managing your properties on LogiQ Estates Pro.</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={action} className="space-y-4">

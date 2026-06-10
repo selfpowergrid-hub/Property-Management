@@ -20,6 +20,7 @@ const STAFF_NAV: NavItem[] = [
   { label: "Properties", href: "/properties", icon: "Building2", feature: "properties.manage" },
   { label: "Tenants & Leases", href: "/tenants", icon: "Users", feature: "tenants.manage" },
   { label: "Payments", href: "/payments", icon: "Receipt", feature: "payments.record" },
+  { label: "Reminders", href: "/reminders", icon: "Bell", feature: "payments.record" },
   { label: "Vacancies", href: "/vacancies", icon: "DoorOpen", feature: "properties.manage" },
   { label: "Maintenance", href: "/maintenance", icon: "Wrench", feature: "maintenance.manage" },
   { label: "Expenses", href: "/expenses", icon: "Wallet", feature: "expenses.record" },

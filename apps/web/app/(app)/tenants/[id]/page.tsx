@@ -220,7 +220,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
                           submitLabel="Confirm move-out"
                         >
                           <input type="hidden" name="leaseId" value={l.id} />
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <Field label="Notice date" htmlFor="noticeDate">
                               <Input id="noticeDate" name="noticeDate" type="date" required />
                             </Field>

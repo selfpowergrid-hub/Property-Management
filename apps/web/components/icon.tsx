@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Bell,
   Building2,
   DoorOpen,
   FileText,
@@ -25,6 +26,7 @@ const ICONS: Record<string, LucideIcon> = {
   Wrench,
   Wallet,
   BarChart3,
+  Bell,
   ShieldCheck,
   Settings,
   Home,

@@ -59,7 +59,7 @@ export async function getReceiptData(
     method: payment.method,
     payerName: payment.payer_name,
     reference: payment.mpesa_code ?? payment.bank_ref ?? null,
-    orgName: org?.name ?? "Nyumba360",
+    orgName: org?.name ?? "LogiQ Estates Pro",
     tenantName: lease?.tenants?.full_name ?? "—",
     unitNumber: lease?.units?.unit_number ?? "—",
     propertyName: lease?.units?.properties?.name ?? "—",

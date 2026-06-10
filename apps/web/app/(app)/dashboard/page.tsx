@@ -65,7 +65,7 @@ export default async function DashboardPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Welcome to Nyumba360</CardTitle>
+          <CardTitle>Welcome to LogiQ Estates Pro</CardTitle>
           <CardDescription>
             You&apos;re signed in as {user.profile?.full_name ?? user.email}. This is the Phase 1
             foundation — authentication, multi-tenant data isolation, and role-based navigation are

@@ -19,9 +19,9 @@ export const dynamic = "force-dynamic";
 // Visual identity per property type: a gradient banner + a fitting building icon
 // so the cards read at a glance without needing uploaded photos.
 const TYPE_STYLE: Record<(typeof PROPERTY_TYPES)[number], { gradient: string; Icon: LucideIcon }> = {
-  residential: { gradient: "from-emerald-500 to-teal-600", Icon: Building2 },
-  commercial: { gradient: "from-amber-500 to-orange-600", Icon: Store },
-  mixed: { gradient: "from-violet-500 to-purple-600", Icon: Building },
+  residential: { gradient: "from-orange-400 to-rose-500", Icon: Building2 },
+  commercial: { gradient: "from-amber-400 to-orange-600", Icon: Store },
+  mixed: { gradient: "from-rose-400 to-amber-500", Icon: Building },
 };
 
 export default async function PropertiesPage() {

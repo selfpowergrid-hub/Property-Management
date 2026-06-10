@@ -96,7 +96,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
       submitLabel="Add unit"
     >
       <input type="hidden" name="propertyId" value={property.id} />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Unit number" htmlFor="unitNumber">
           <Input id="unitNumber" name="unitNumber" placeholder="A1" required />
         </Field>

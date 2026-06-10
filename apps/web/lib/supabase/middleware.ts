@@ -5,7 +5,7 @@ import { homeRouteForRole, type UserRole } from "@nyumba360/shared";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/env";
 
 /** Routes reachable without a session. */
-const PUBLIC_PREFIXES = ["/login", "/signup", "/reset", "/accept-invite", "/_next", "/favicon"];
+const PUBLIC_PREFIXES = ["/login", "/signup", "/reset", "/accept-invite", "/listings", "/_next", "/favicon"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}`));

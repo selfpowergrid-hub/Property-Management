@@ -34,6 +34,10 @@ export async function recordPaymentAction(_prev: MutationState, formData: FormDa
   });
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input");
 
+  // Optional withholding tax already deducted by an appointed agent (credited
+  // in the MRI worksheet). Not part of paymentSchema; read defensively.
+  const whtAmount = Math.max(0, Number(formData.get("whtAmount") ?? 0) || 0);
+
   const supabase = await createClient();
   const { data: payment, error } = await supabase
     .from("payments")
@@ -46,6 +50,7 @@ export async function recordPaymentAction(_prev: MutationState, formData: FormDa
       mpesa_code: parsed.data.mpesaCode || null,
       bank_ref: parsed.data.bankRef || null,
       payer_name: parsed.data.payerName || null,
+      wht_amount: whtAmount,
       recorded_by: me.id,
     })
     .select("id")

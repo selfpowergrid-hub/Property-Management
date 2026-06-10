@@ -35,6 +35,18 @@ type OrganisationRow = Timestamps & {
   county: string | null;
   grace_days: number;
   mpesa_paybill_number: string | null;
+  kra_pin: string | null;
+  mri_rate: number;
+  mri_threshold_min: number;
+  mri_threshold_max: number;
+  vat_registered: boolean;
+  vat_rate: number;
+  logo_path: string | null;
+  registration_number: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  postal_address: string | null;
 };
 
 export type DocumentOwnerType = "property" | "unit" | "lease" | "maintenance";
@@ -178,6 +190,7 @@ type PaymentRow = Timestamps & {
   receipt_number: string | null;
   recorded_by: string | null;
   is_late: boolean;
+  wht_amount: number;
 };
 
 type MaintenanceRow = Timestamps & {
@@ -234,6 +247,26 @@ type InvitationRow = {
   created_at: string;
 };
 
+/** Public marketplace listing (safe columns returned by the SECURITY DEFINER
+ *  functions to the anon role — only listed, vacant units). */
+export type PublicListingRow = {
+  unit_id: string;
+  unit_number: string;
+  unit_type: string | null;
+  monthly_rent: number;
+  listing_description: string | null;
+  property_name: string;
+  county: string | null;
+  property_type: PropertyType;
+  company_name: string;
+  company_phone: string | null;
+  company_email: string | null;
+  company_logo_path: string | null;
+  photo_path: string | null;
+};
+
+export type ListingPhotoRef = { bucket: string; path: string };
+
 /** A foreign-key relationship entry (shape required by postgrest-js to type
  *  embedded `select('child(...)')` resources). All our FKs reference `id`. */
 type FK<Col extends string, Ref extends string> = {
@@ -256,7 +289,28 @@ type Table<Row, Optional extends keyof Row, Rel extends readonly unknown[] = []>
 export interface Database {
   public: {
     Tables: {
-      organisations: Table<OrganisationRow, "id" | keyof Timestamps | "plan" | "subscription_status" | "county" | "grace_days" | "mpesa_paybill_number">;
+      organisations: Table<
+        OrganisationRow,
+        | "id"
+        | keyof Timestamps
+        | "plan"
+        | "subscription_status"
+        | "county"
+        | "grace_days"
+        | "mpesa_paybill_number"
+        | "kra_pin"
+        | "mri_rate"
+        | "mri_threshold_min"
+        | "mri_threshold_max"
+        | "vat_registered"
+        | "vat_rate"
+        | "logo_path"
+        | "registration_number"
+        | "phone"
+        | "email"
+        | "address"
+        | "postal_address"
+      >;
       documents: Table<
         DocumentRow,
         "id" | "created_at" | "content_type" | "uploaded_by",
@@ -326,7 +380,7 @@ export interface Database {
       >;
       payments: Table<
         PaymentRow,
-        "id" | keyof Timestamps | "lease_id" | "invoice_id" | "payment_date" | "mpesa_code" | "bank_ref" | "payer_name" | "receipt_number" | "recorded_by" | "is_late",
+        "id" | keyof Timestamps | "lease_id" | "invoice_id" | "payment_date" | "mpesa_code" | "bank_ref" | "payer_name" | "receipt_number" | "recorded_by" | "is_late" | "wht_amount",
         [FK<"org_id", "organisations">, FK<"lease_id", "leases">, FK<"invoice_id", "invoices">]
       >;
       maintenance_requests: Table<
@@ -356,6 +410,22 @@ export interface Database {
       refresh_invoice_status: { Args: { p_invoice: string }; Returns: undefined };
       generate_first_invoice: { Args: { p_lease: string }; Returns: undefined };
       generate_due_invoices: { Args: { p_as_of?: string }; Returns: number };
+      list_public_listings: {
+        Args: { p_county?: string | null; p_type?: string | null; p_max_rent?: number | null };
+        Returns: PublicListingRow[];
+      };
+      get_public_listing: { Args: { p_unit: string }; Returns: PublicListingRow[] };
+      get_listing_photos: { Args: { p_unit: string }; Returns: ListingPhotoRef[] };
+      submit_public_inquiry: {
+        Args: {
+          p_unit: string;
+          p_name: string;
+          p_phone: string;
+          p_move_in?: string | null;
+          p_message?: string | null;
+        };
+        Returns: undefined;
+      };
     };
     CompositeTypes: Record<string, never>;
     Enums: {

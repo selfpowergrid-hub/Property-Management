@@ -80,7 +80,7 @@ export function RecordPaymentFields({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Amount (KES)" htmlFor="amount">
           <Input
             id="amount"
@@ -118,6 +118,9 @@ export function RecordPaymentFields({
         </Field>
         <Field label="Payer name" htmlFor="payerName">
           <Input id="payerName" name="payerName" defaultValue={selected?.tenantName ?? ""} />
+        </Field>
+        <Field label="Withholding tax (KES)" htmlFor="whtAmount" hint="If an agent withheld rent tax (optional)">
+          <Input id="whtAmount" name="whtAmount" type="number" min="0" step="0.01" defaultValue={0} />
         </Field>
         {method === "mpesa_paybill" ? (
           <Field label="M-Pesa code" htmlFor="mpesaCode" hint="Transaction code from the SMS">

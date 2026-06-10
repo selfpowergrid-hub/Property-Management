@@ -36,9 +36,29 @@ export const signInSchema = z.object({
 });
 export type SignInInput = z.infer<typeof signInSchema>;
 
+// Company registration / profile. Only the name is required; the rest enrich
+// receipts, reports, and the company record. `optionalText`, `kraPin`, `phoneKE`
+// are declared lower in this file but hoisted const-init isn't needed since the
+// schema object is only evaluated on use.
 export const createOrganisationSchema = z.object({
-  name: z.string().trim().min(2, "Organisation name is required"),
-  county: z.string().trim().optional(),
+  name: z.string().trim().min(2, "Company name is required"),
+  registrationNumber: z.string().trim().optional().or(z.literal("")),
+  kraPin: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]\d{9}[A-Za-z]$/u, "Enter a valid KRA PIN (e.g. A012345678Z)")
+    .optional()
+    .or(z.literal("")),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?254\d{9}$|^0\d{9}$/u, "Enter a valid Kenyan phone number")
+    .optional()
+    .or(z.literal("")),
+  email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")),
+  county: z.string().trim().optional().or(z.literal("")),
+  address: z.string().trim().optional().or(z.literal("")),
+  postalAddress: z.string().trim().optional().or(z.literal("")),
 });
 export type CreateOrganisationInput = z.infer<typeof createOrganisationSchema>;
 
@@ -60,6 +80,21 @@ export const orgBillingSchema = z.object({
   graceDays: z.coerce.number().int().min(0, "Cannot be negative").max(31, "At most 31 days"),
 });
 export type OrgBillingInput = z.infer<typeof orgBillingSchema>;
+
+// Rental tax profile (Phase A — MRI). Rates are fractions (0.075 = 7.5%) so the
+// worksheet stays correct across Finance Act changes.
+export const orgTaxSchema = z.object({
+  kraPin: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]\d{9}[A-Za-z]$/u, "Enter a valid KRA PIN (e.g. A012345678Z)")
+    .optional()
+    .or(z.literal("")),
+  mriRate: z.coerce.number().min(0, "Cannot be negative").max(1, "Use a fraction, e.g. 0.075"),
+  vatRegistered: z.coerce.boolean(),
+  vatRate: z.coerce.number().min(0, "Cannot be negative").max(1, "Use a fraction, e.g. 0.16"),
+});
+export type OrgTaxInput = z.infer<typeof orgTaxSchema>;
 
 // ── Property & unit ─────────────────────────────────────────────────────────
 export const propertySchema = z.object({

@@ -25,7 +25,7 @@ function Receipt({ data }: { data: ReceiptData }) {
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.brand}>Nyumba360</Text>
+            <Text style={styles.brand}>LogiQ Estates Pro</Text>
             <Text style={styles.org}>{data.orgName}</Text>
           </View>
           <View>
@@ -85,7 +85,7 @@ function Receipt({ data }: { data: ReceiptData }) {
         </View>
 
         <Text style={styles.footer}>
-          This is a system-generated receipt from Nyumba360. Thank you for your payment.
+          This is a system-generated receipt from LogiQ Estates Pro. Thank you for your payment.
         </Text>
       </Page>
     </Document>

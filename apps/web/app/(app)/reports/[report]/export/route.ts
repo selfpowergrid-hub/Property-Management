@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { report: stri
   }
 
   const { data: org } = await supabase.from("organisations").select("name").eq("id", me.orgId!).maybeSingle();
-  const pdf = await renderReport(table, range, org?.name ?? "Nyumba360");
+  const pdf = await renderReport(table, range, org?.name ?? "LogiQ Estates Pro");
   return new Response(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), {
     headers: {
       "Content-Type": "application/pdf",

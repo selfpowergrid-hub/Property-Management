@@ -197,12 +197,80 @@ const maintenanceSummary: Builder = async (supabase, { from, to }) => {
   };
 };
 
+// Monthly Rental Income (MRI) tax — KRA filing worksheet. Computes MRI on
+// RESIDENTIAL rent *received* (cash basis) at the org's configured rate, less
+// any withholding-tax credit, per month. Commercial rent is excluded (it falls
+// under the normal income-tax regime). Estimates only — not a KRA filing.
+const mriTax: Builder = async (supabase, { from, to }) => {
+  const [{ data: org }, { data: payments }] = await Promise.all([
+    supabase
+      .from("organisations")
+      .select("mri_rate, mri_threshold_min, mri_threshold_max")
+      .maybeSingle(),
+    supabase
+      .from("payments")
+      .select("amount, wht_amount, payment_date, leases(units(properties(type)))")
+      .gte("payment_date", from)
+      .lte("payment_date", to),
+  ]);
+
+  const rate = Number(org?.mri_rate ?? 0.075);
+  const minBand = Number(org?.mri_threshold_min ?? 288000);
+  const maxBand = Number(org?.mri_threshold_max ?? 15000000);
+
+  const months = new Map<string, { gross: number; wht: number }>();
+  for (const p of payments ?? []) {
+    const type = (
+      (p.leases as { units?: { properties?: { type?: string } } } | null)?.units?.properties?.type
+    );
+    if (type !== "residential") continue; // MRI is residential-only
+    const m = monthKey(p.payment_date);
+    const g = months.get(m) ?? { gross: 0, wht: 0 };
+    g.gross += Number(p.amount);
+    g.wht += Number(p.wht_amount ?? 0);
+    months.set(m, g);
+  }
+
+  const list = [...months.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const totalGross = list.reduce((s, [, g]) => s + g.gross, 0);
+  const totalWht = list.reduce((s, [, g]) => s + g.wht, 0);
+  const totalMri = totalGross * rate;
+  const totalNet = Math.max(0, totalMri - totalWht);
+
+  // Annualise the in-range gross to sense-check MRI eligibility (288k–15M/yr).
+  const monthsCount = Math.max(1, list.length);
+  const annualised = (totalGross / monthsCount) * 12;
+  const eligibility =
+    annualised < minBand
+      ? "Below MRI band — likely exempt"
+      : annualised > maxBand
+        ? "Above MRI band — normal income tax applies"
+        : "Within MRI band";
+
+  return {
+    title: "Monthly Rental Income (MRI) Tax",
+    columns: ["Month", "Residential rent received", `MRI @ ${(rate * 100).toFixed(2).replace(/\.?0+$/, "")}%`, "WHT credit", "Net payable"],
+    rows: list.map(([m, g]) => {
+      const mri = g.gross * rate;
+      return [m, formatKES(g.gross), formatKES(mri), formatKES(g.wht), formatKES(Math.max(0, mri - g.wht))];
+    }),
+    summary: [
+      { label: "Residential rent received", value: formatKES(totalGross) },
+      { label: "MRI due", value: formatKES(totalMri) },
+      { label: "Withholding credit", value: formatKES(totalWht) },
+      { label: "Net MRI payable", value: formatKES(totalNet) },
+      { label: "Annualised gross", value: `${formatKES(annualised)} — ${eligibility}` },
+    ],
+  };
+};
+
 export const REPORTS: Record<string, { label: string; description: string; build: Builder }> = {
   "rent-collection": { label: "Rent Collection", description: "Invoiced vs collected vs outstanding per property.", build: rentCollection },
   "income-expense": { label: "Income & Expense", description: "Gross income, expenses, and net per period.", build: incomeExpense },
   arrears: { label: "Tenant Arrears", description: "Outstanding balances with aging.", build: arrears },
   occupancy: { label: "Occupancy", description: "Occupancy rate per property.", build: occupancy },
   maintenance: { label: "Maintenance Summary", description: "Tickets, resolution time, and cost.", build: maintenanceSummary },
+  "mri-tax": { label: "MRI Tax", description: "Monthly Rental Income tax worksheet for KRA filing.", build: mriTax },
 };
 
 export type ReportSlug = keyof typeof REPORTS;

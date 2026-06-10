@@ -6,6 +6,7 @@ import { signInAction, type ActionState } from "@/app/actions/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { buttonVariants } from "@/components/ui/button";
 import { SubmitButton } from "@/components/submit-button";
 
 const initial: ActionState = {};
@@ -42,12 +43,12 @@ export function LoginForm({ invited }: { invited: boolean }) {
           {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
           <SubmitButton className="w-full">Sign in</SubmitButton>
         </form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          New landlord?{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            Create an account
+        <div className="mt-6 border-t pt-5">
+          <p className="mb-2 text-center text-sm text-muted-foreground">New to LogiQ Estates Pro?</p>
+          <Link href="/signup" className={`${buttonVariants({ variant: "outline" })} w-full`}>
+            Register your company
           </Link>
-        </p>
+        </div>
       </CardContent>
     </Card>
   );

@@ -56,7 +56,7 @@ export default async function ExpensesPage() {
           ))}
         </Select>
       </Field>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Category" htmlFor="category">
           <Select id="category" name="category" defaultValue="repairs">
             {EXPENSE_CATEGORIES.map((c) => (
